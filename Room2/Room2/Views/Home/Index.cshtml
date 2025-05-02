@@ -1,0 +1,234 @@
+﻿@{
+    ViewData["Title"] = "Split Bill";
+    var bills = ViewBag.Bills as List<Room2.Models.Bill>;
+    var members = ViewBag.Members as List<string>;
+    var total = (decimal)ViewBag.TotalAmount;
+    var perShare = (decimal)ViewBag.PerMemberAmount;
+}
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+</head>
+
+<h2><i class="fas fa-money-bill-wave"></i> Split Bill - Room 405</h2>
+
+<!-- Member Section -->
+<h4><i class="fas fa-users"></i> Enter Members</h4>
+<form asp-action="SetMembers" method="post" id="membersForm">
+    <div id="errorMessage" style="color: red; margin-bottom: 10px; display: none;"></div>
+
+    <div id="memberInputs">
+        @if (members.Count == 0)
+        {
+            <div class="member-row">
+                <input type="text" name="memberNames[]" placeholder="Enter member name" required />
+                <button type="button" class="remove-btn" onclick="removeMember(this)"><i class="fas fa-times"></i></button>
+            </div>
+        }
+        else
+        {
+            @foreach (var member in members)
+            {
+                <div class="member-row">
+                    <input type="text" name="memberNames[]" value="@member" required />
+                    <button type="button" class="remove-btn" onclick="removeMember(this)"><i class="fas fa-times"></i></button>
+                </div>
+            }
+        }
+    </div>
+
+    <button type="button" id="addMemberBtn"><i class="fas fa-user-plus"></i> Add Member</button>
+
+    <input type="hidden" id="memberNamesHidden" name="memberNames" />
+    <button type="submit" id="saveMembersBtn"><i class="fas fa-save"></i> Save Members</button>
+    <button type="button" id="clearAllBtn"><i class="fas fa-trash-alt"></i> Clear All</button>
+</form>
+
+<hr />
+
+<!-- Add Bill Form -->
+<h4><i class="fas fa-receipt"></i> Enter Bill</h4>
+<form asp-action="AddBill" method="post">
+    <input style="display:none" type="text" name="Title" value="Room - 405" required />
+    <input type="text" id="categoryInput" name="Category" placeholder="Category" required />
+    <input type="number" step="0.01" id="amountInput" name="Amount" placeholder="Amount" required />
+    <button type="submit" id="addBillButton"><i class="fas fa-plus-circle"></i> Add Bill</button>
+</form>
+
+<hr />
+
+<h4><i class="fas fa-credit-card"></i> Total Amount: <span id="totalAmount">@total.ToString("F2")</span></h4>
+<h4><i class="fas fa-users"></i> Each Member Pays: <span id="perMemberAmount">@perShare.ToString("F2")</span></h4>
+
+@if (members.Count > 0)
+{
+    <h4><i class="fas fa-users"></i> Members:</h4>
+    <ul>
+        @foreach (var m in members)
+        {
+            <li id="member_">@m — ₹@perShare.ToString("F2")</li>
+        }
+    </ul>
+}
+
+@if (bills.Count > 0)
+{
+    <h4><i class="fas fa-receipt"></i> All Bills:</h4>
+    <ul>
+        @foreach (var bill in bills)
+        {
+            <li id="bill_@bill">₹@bill.Amount.ToString("F2") (@bill.Category)</li>
+        }
+    </ul>
+}
+
+<script>
+    document.getElementById("clearAllBtn").addEventListener("click", function () {
+        var memberInputs = document.getElementById("memberInputs");
+        memberInputs.innerHTML = `
+            <div class="member-row">
+                <input type="text" name="memberNames[]" placeholder="Enter member name" required oninput="updateFieldsStatus(); clearErrorMessage(); this.style.border='';" />
+                <button type="button" class="remove-btn" onclick="removeMember(this)"><i class="fas fa-times"></i></button>
+            </div>`;
+
+        clearErrorMessage();
+        document.getElementById("categoryInput").value = "";
+        document.getElementById("amountInput").value = "";
+        document.getElementById("saveMembersBtn").disabled = true;
+        document.getElementById("addBillButton").disabled = true;
+        document.getElementById("categoryInput").disabled = true;
+        document.getElementById("amountInput").disabled = true;
+
+        document.getElementById("totalAmount").textContent = "₹0.00";
+        document.getElementById("perMemberAmount").textContent = "₹0.00";
+
+        var memberlist = document.querySelectorAll("[id^='member_']");
+        memberlist.forEach(function(item) {
+            item.remove();
+        });
+
+        var billsListItems = document.querySelectorAll("[id^='bill_']");
+        billsListItems.forEach(function(item) {
+            item.remove();
+        });
+    });
+</script>
+
+<script>
+    function updateFieldsStatus() {
+        var names = [];
+        document.querySelectorAll("input[name='memberNames[]']").forEach(input => {
+            if (input.value.trim() !== "") names.push(input.value.trim());
+        });
+
+        var enable = names.length >= 2;
+
+        document.getElementById("saveMembersBtn").disabled = !enable;
+        document.getElementById("categoryInput").disabled = !enable;
+        document.getElementById("amountInput").disabled = !enable;
+        document.getElementById("addBillButton").disabled = !enable;
+    }
+
+    function removeMember(button) {
+        button.parentElement.remove();
+        updateFieldsStatus();
+        clearErrorMessage();
+    }
+
+    function clearErrorMessage() {
+        document.getElementById("errorMessage").style.display = "none";
+        document.getElementById("errorMessage").innerText = "";
+    }
+
+    window.onload = function () {
+        document.getElementById("saveMembersBtn").disabled = true;
+        document.getElementById("categoryInput").disabled = true;
+        document.getElementById("amountInput").disabled = true;
+        document.getElementById("addBillButton").disabled = true;
+
+        document.querySelectorAll("input[name='memberNames[]']").forEach(input => {
+            input.addEventListener('input', function() {
+                updateFieldsStatus();
+                clearErrorMessage();
+                this.style.border = "";
+            });
+        });
+
+        document.getElementById("addMemberBtn").addEventListener("click", function () {
+            var inputs = document.querySelectorAll("input[name='memberNames[]']");
+            var emptyFound = false;
+
+            inputs.forEach(input => {
+                if (input.value.trim() === "") {
+                    emptyFound = true;
+                    input.style.border = "2px solid red";
+                    input.placeholder = "Enter Name";
+                } else {
+                    input.style.border = "";
+                }
+            });
+
+            if (emptyFound) {
+                document.getElementById("errorMessage").innerText = "Please fill member names";
+                document.getElementById("errorMessage").style.display = "block";
+                return;
+            }
+
+            clearErrorMessage();
+
+            var div = document.createElement("div");
+            div.className = "member-row";
+            div.innerHTML = `<input type="text" name="memberNames[]" placeholder="Enter member name" required oninput="updateFieldsStatus(); clearErrorMessage(); this.style.border='';" />
+                             <button type="button" class="remove-btn" onclick="removeMember(this)"><i class="fas fa-times"></i></button>`;
+            document.getElementById("memberInputs").appendChild(div);
+        });
+
+        updateFieldsStatus();
+    };
+
+    document.getElementById("membersForm").addEventListener("submit", function (e) {
+        var names = [];
+        document.querySelectorAll("input[name='memberNames[]']").forEach(input => {
+            if (input.value.trim() !== "") names.push(input.value.trim());
+        });
+
+        if (names.length < 2) {
+            e.preventDefault();
+            document.getElementById("errorMessage").innerText = "Please enter at least 2 members before saving.";
+            document.getElementById("errorMessage").style.display = "block";
+            return;
+        }
+
+        document.getElementById("memberNamesHidden").value = names.join(",");
+    });
+</script>
+
+<style>
+    #clearAllBtn {
+        font-size: 16px;
+        background-color: #e60000;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        margin-top: 10px;
+        margin-left: 10px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+
+        #clearAllBtn:hover {
+            background-color: #990000;
+        }
+
+    .remove-btn {
+        background: none;
+        border: none;
+        color: red;
+        cursor: pointer;
+        font-size: 20px;
+    }
+
+        .remove-btn:hover {
+            color: darkred;
+        }
+</style>
