@@ -1,0 +1,15 @@
+# Use the official .NET runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+
+WORKDIR /app
+
+COPY ./Room2.dll .
+
+# Optional: Copy dependencies
+# COPY ./OtherLib.dll .
+
+# Expose the port (used by the app)
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "Room2.dll"]
+
