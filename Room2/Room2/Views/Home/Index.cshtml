@@ -1,9 +1,9 @@
-﻿@{
+@{
     ViewData["Title"] = "Split Bill";
-    var bills = ViewBag.Bills as List<Room2.Models.Bill>;
-    var members = ViewBag.Members as List<string>;
-    var total = (decimal)ViewBag.TotalAmount;
-    var perShare = (decimal)ViewBag.PerMemberAmount;
+    var bills = ViewBag.Bills as List<Room2.Models.Bill> ?? new List<Room2.Models.Bill>();
+    var members = ViewBag.Members as List<string> ?? new List<string>();
+    var total = (decimal)(ViewBag.TotalAmount ?? 0);
+    var perShare = (decimal)(ViewBag.PerMemberAmount ?? 0);
 }
 
 <head>
@@ -41,7 +41,11 @@
 
     <input type="hidden" id="memberNamesHidden" name="memberNames" />
     <button type="submit" id="saveMembersBtn"><i class="fas fa-save"></i> Save Members</button>
-    <button type="button" id="clearAllBtn"><i class="fas fa-trash-alt"></i> Clear All</button>
+</form>
+
+<!-- Clear All -->
+<form asp-action="ClearAllData" method="post" style="display:inline;">
+    <button type="submit" id="clearAllBtn"><i class="fas fa-trash-alt"></i> Clear All</button>
 </form>
 
 <hr />
@@ -66,7 +70,7 @@
     <ul>
         @foreach (var m in members)
         {
-            <li id="member_">@m — ₹@perShare.ToString("F2")</li>
+            <li>@m — ₹@perShare.ToString("F2")</li>
         }
     </ul>
 }
@@ -77,43 +81,12 @@
     <ul>
         @foreach (var bill in bills)
         {
-            <li id="bill_@bill">₹@bill.Amount.ToString("F2") (@bill.Category)</li>
+            <li>₹@bill.Amount.ToString("F2") (@bill.Category)</li>
         }
     </ul>
 }
 
-<script>
-    document.getElementById("clearAllBtn").addEventListener("click", function () {
-        var memberInputs = document.getElementById("memberInputs");
-        memberInputs.innerHTML = `
-            <div class="member-row">
-                <input type="text" name="memberNames[]" placeholder="Enter member name" required oninput="updateFieldsStatus(); clearErrorMessage(); this.style.border='';" />
-                <button type="button" class="remove-btn" onclick="removeMember(this)"><i class="fas fa-times"></i></button>
-            </div>`;
-
-        clearErrorMessage();
-        document.getElementById("categoryInput").value = "";
-        document.getElementById("amountInput").value = "";
-        document.getElementById("saveMembersBtn").disabled = true;
-        document.getElementById("addBillButton").disabled = true;
-        document.getElementById("categoryInput").disabled = true;
-        document.getElementById("amountInput").disabled = true;
-
-        document.getElementById("totalAmount").textContent = "₹0.00";
-        document.getElementById("perMemberAmount").textContent = "₹0.00";
-
-        var memberlist = document.querySelectorAll("[id^='member_']");
-        memberlist.forEach(function(item) {
-            item.remove();
-        });
-
-        var billsListItems = document.querySelectorAll("[id^='bill_']");
-        billsListItems.forEach(function(item) {
-            item.remove();
-        });
-    });
-</script>
-
+<!-- JavaScript logic -->
 <script>
     function updateFieldsStatus() {
         var names = [];
@@ -147,7 +120,7 @@
         document.getElementById("addBillButton").disabled = true;
 
         document.querySelectorAll("input[name='memberNames[]']").forEach(input => {
-            input.addEventListener('input', function() {
+            input.addEventListener('input', function () {
                 updateFieldsStatus();
                 clearErrorMessage();
                 this.style.border = "";
